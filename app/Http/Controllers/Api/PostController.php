@@ -6,6 +6,7 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PostResource;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class PostController extends Controller
@@ -63,5 +64,48 @@ class PostController extends Controller
         $post = Post::find($id);
 
         return new PostResource(true, 'Detail Data Post!', $post);
+    }
+
+    /**
+     * update
+     *
+     * @param  mixed $request
+     * @param  mixed $id
+     * @return void
+     */
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'title'     => 'required',
+            'content'   => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $post = Post::find($id);
+
+        if ($request->hasFile('image')) {
+
+            $image = $request->file('image');
+            $image->storeAs('public/posts', $image->hashName());
+
+            Storage::delete('public/posts/' . basename($post->image));
+
+            $post->update([
+                'image'     => $image->hashName(),
+                'title'     => $request->title,
+                'content'   => $request->content,
+            ]);
+        } else {
+
+            $post->update([
+                'title'     => $request->title,
+                'content'   => $request->content,
+            ]);
+        }
+
+        return new PostResource(true, 'Data Post Berhasil Diubah!', $post);
     }
 }
